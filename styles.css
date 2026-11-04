@@ -43,7 +43,7 @@
 .social-button svg{width:19px;height:19px;display:block}
 .social-button:not([aria-disabled="true"]):hover{color:#fff;border-color:#ff52c7;background:#192d4b;transform:translateY(-2px)}
 .social-button[aria-disabled="true"]{color:#91a0b7;border-color:#42516b;cursor:not-allowed}
-.tokenomics{background:linear-gradient(180deg,#090f20,#11132a 50%,#09152d);padding:40px 0}
+.tokenomics{background:linear-gradient(180deg,#090f20,#11132a 50%,#09152d);padding:28px 0}
 .tokenomics-layout{display:grid;grid-template-columns:minmax(240px,.7fr) minmax(0,1.5fr);gap:clamp(30px,6vw,90px);align-items:center}
 .tokenomics-intro h2{font-size:clamp(30px,4vw,58px);font-weight:900;font-style:italic;letter-spacing:-.065em;line-height:1;margin:0}
 .tokenomics-intro h2 em{font-style:italic;color:var(--cyan)}
@@ -73,11 +73,11 @@
 .characters,.routes,.map-section,.local-section{padding:32px 0 24px}
 .section-heading{margin-bottom:16px}
 .section-footnote{margin-top:10px}
-.tokenomics{padding:40px 0}
+.tokenomics{padding:28px 0}
 .community-content{padding-block:48px 28px}
 @media(max-width:700px){
   .briefing-grid{padding-block:24px}
   .characters,.routes,.map-section,.local-section{padding:28px 0 22px}
-  .tokenomics{padding:32px 0}
+  .tokenomics{padding:24px 0}
   .community-content{padding-block:36px 24px}
 }
