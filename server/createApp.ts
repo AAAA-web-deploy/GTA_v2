@@ -445,7 +445,7 @@ export function createApp(options: AppOptions): App {
         sendJson(res, 400, { error: filters.error })
         return
       }
-      const reveal = url.searchParams.get('reveal') === '1'
+      const reveal = url.searchParams.get('reveal') !== '0'
       const rows = await db.exportVisits(filters, reveal, 5000)
       const csv = toCsv([
         ['visit_id', 'visitor_id', 'ip', 'location', 'started_at', 'last_seen', 'path', 'section', 'browser', 'os', 'device', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign', 'classification'],
@@ -475,7 +475,7 @@ export function createApp(options: AppOptions): App {
     }
     const detail = /^\/api\/dashboard\/analytics\/visits\/([^/]+)$/.exec(pathname)
     if (req.method === 'GET' && detail) {
-      const visit = await db.getVisit(detail[1], url.searchParams.get('reveal') === '1')
+      const visit = await db.getVisit(detail[1], url.searchParams.get('reveal') !== '0')
       if (!visit) {
         sendJson(res, 404, { error: 'Visit not found.' })
         return

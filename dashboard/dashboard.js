@@ -150,12 +150,7 @@
       const place = document.createElement("td");
       place.textContent = visit.location || "";
       const ip = document.createElement("td");
-      const reveal = document.createElement("button");
-      reveal.className = "link";
-      reveal.type = "button";
-      reveal.textContent = revealed[visit.id] || visit.ip || "Hidden";
-      reveal.addEventListener("click", function () { revealIp(visit.id, reveal); });
-      ip.appendChild(reveal);
+      ip.textContent = revealed[visit.id] || visit.ip || "Unavailable";
       const device = document.createElement("td");
       device.textContent = [visit.device, visit.browser, visit.os].filter(Boolean).join(" · ");
       const path = document.createElement("td");
@@ -225,22 +220,6 @@
     });
   }
 
-  function revealIp(id, button) {
-    if (revealed[id]) {
-      delete revealed[id];
-      button.textContent = "Hidden";
-      return;
-    }
-    api("/api/dashboard/analytics/visits/" + id + "?reveal=1").then(function (result) {
-      if (!result.ok) {
-        notice.textContent = message(result, "The IP address could not be revealed.");
-        return;
-      }
-      revealed[id] = result.data.ip;
-      button.textContent = result.data.ip;
-    });
-  }
-
   loginForm.addEventListener("submit", function (event) {
     event.preventDefault();
     const button = document.getElementById("login-button");
@@ -304,7 +283,7 @@
 
   document.getElementById("export").addEventListener("click", function () {
     const query = filters();
-    if (document.getElementById("include-ips").checked) query.set("reveal", "1");
+    query.set("reveal", document.getElementById("include-ips").checked ? "1" : "0");
     const exportHeaders = { "x-csrf-token": csrf, accept: "text/csv" };
     if (accessToken) exportHeaders.authorization = "Bearer " + accessToken;
     fetch(url("/api/dashboard/analytics/export?" + query.toString()), {
