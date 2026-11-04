@@ -1,0 +1,9 @@
+{
+  "brand": {
+    "name": "Grand Theft Anakin",
+    "ticker": "$GTA"
+  },
+  "analytics": {
+    "apiOrigin": "https://gtaanakin.103.161.35.238.sslip.io"
+  }
+}
