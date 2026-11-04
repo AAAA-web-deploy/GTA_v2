@@ -9,7 +9,8 @@
     const raw = typeof config[key] === 'string' ? config[key].trim() : '';
     node.textContent = key === 'contractAddress' ? (validAddress ? rawAddress : (raw ? 'Invalid address — check configuration' : 'Not provided')) : (raw || 'To be announced');
   });
-  const tokenDetailsReady = validAddress && ['totalSupply','buySellTax','lpBurn','lpLocked'].every(key => typeof config[key] === 'string' && config[key].trim());
+  const filled = (key) => typeof config[key] === 'string' && config[key].trim();
+  const tokenDetailsReady = validAddress && filled('totalSupply') && filled('buySellTax') && (filled('lpBurn') || filled('lpLocked'));
   const pendingNote = document.querySelector('.tokenomics-note');
   if (pendingNote) pendingNote.hidden = Boolean(tokenDetailsReady);
   function verifiedSocialUrl(value, kind) {
