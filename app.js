@@ -10,7 +10,7 @@
     node.textContent = key === 'contractAddress' ? (validAddress ? rawAddress : (raw ? 'Invalid address — check configuration' : 'Not provided')) : (raw || 'To be announced');
   });
   const filled = (key) => typeof config[key] === 'string' && config[key].trim();
-  const tokenDetailsReady = validAddress && filled('totalSupply') && filled('buySellTax') && (filled('lpBurn') || filled('lpLocked'));
+  const tokenDetailsReady = validAddress && filled('totalSupply') && filled('buySellTax') && (filled('ownership') || filled('lpLocked'));
   const pendingNote = document.querySelector('.tokenomics-note');
   if (pendingNote) pendingNote.hidden = Boolean(tokenDetailsReady);
   function verifiedSocialUrl(value, kind) {
