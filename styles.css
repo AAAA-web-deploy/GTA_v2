@@ -68,3 +68,16 @@
 }
 @media(max-width:700px){.tokenomics{padding:48px 0}.tokenomics-layout{grid-template-columns:1fr;gap:25px}.tokenomics-intro p:not(.section-kicker){max-width:none}.token-stat{min-height:76px;padding:12px}.token-stat strong{font-size:12px}.token-ca{align-items:center}.community-socials .social-button{width:50px;height:50px}}
 @media(max-width:430px){.header-inner{gap:6px}.brand-name{display:none}.brand img{width:42px;height:42px}.header-actions{gap:5px}.copy-ca{min-height:36px;padding:7px 8px;font-size:9px}.social-button{width:36px;height:36px}.social-button svg{width:18px;height:18px}.menu-toggle{width:38px;height:38px;margin-left:0}.token-ca{align-items:flex-start;flex-direction:column}.token-copy{align-self:flex-start}}
+/* Tighter section rhythm: remove the thick empty bands between blocks. */
+.briefing-grid{min-height:0;padding-block:22px}
+.characters,.routes,.map-section,.local-section{padding:32px 0 24px}
+.section-heading{margin-bottom:16px}
+.section-footnote{margin-top:10px}
+.tokenomics{padding:40px 0}
+.community-content{padding-block:48px 28px}
+@media(max-width:700px){
+  .briefing-grid{padding-block:24px}
+  .characters,.routes,.map-section,.local-section{padding:28px 0 22px}
+  .tokenomics{padding:32px 0}
+  .community-content{padding-block:36px 24px}
+}
