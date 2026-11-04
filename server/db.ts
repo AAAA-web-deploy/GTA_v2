@@ -168,6 +168,7 @@ export class AnalyticsDb {
       )`,
     )
     this.ensureIpHashColumn()
+    this.dedupeNearDuplicateVisits()
   }
 
   private ensureIpHashColumn() {
@@ -300,7 +301,37 @@ export class AnalyticsDb {
           .get(input.visitorId) as { id: string; last_seen: number } | undefined
         const gap = latest ? input.at - latest.last_seen : Number.POSITIVE_INFINITY
         let visitId = latest && gap >= 0 && gap <= input.visitTimeoutMs ? latest.id : null
+
+        // Cookie-less cross-origin races mint a new visitor id per request.
+        // Reuse a near-identical open visit from the same IP + device fingerprint.
+        if (!visitId && input.ip) {
+          const twin = this.db
+            .prepare(
+              `SELECT id, last_seen FROM visits
+               WHERE ip_hash = ?
+                 AND browser = ?
+                 AND os = ?
+                 AND device = ?
+                 AND path = ?
+                 AND classification = ?
+                 AND last_seen >= ?
+               ORDER BY last_seen DESC LIMIT 1`,
+            )
+            .get(
+              ipHash(input.ip),
+              input.browser,
+              input.os,
+              input.device,
+              input.path,
+              input.classification,
+              input.at - Math.min(input.visitTimeoutMs, 2 * 60 * 1000),
+            ) as { id: string; last_seen: number } | undefined
+          if (twin) visitId = twin.id
+        }
+
         if (!visitId) {
+          // Only pageviews open a visit. Heartbeats/sections/clicks must attach.
+          if (input.type !== 'pageview') return
           visitId = randomUUID()
           const encrypted = input.ip ? encryptIp(this.ipKey, input.ip) : null
           this.db
@@ -345,8 +376,8 @@ export class AnalyticsDb {
             .run(randomUUID(), input.eventId, visitId, input.click, input.at)
         }
         this.db
-          .prepare('UPDATE visits SET last_seen = ?, path = ?, section = COALESCE(?, section) WHERE id = ?')
-          .run(input.at, input.path, input.section, visitId)
+          .prepare('UPDATE visits SET last_seen = ?, path = ?, section = COALESCE(?, section), visitor_id = ? WHERE id = ?')
+          .run(input.at, input.path, input.section, input.visitorId, visitId)
         this.db.prepare('UPDATE visitors SET last_seen = ? WHERE id = ?').run(input.at, input.visitorId)
       })
       return true
@@ -354,6 +385,67 @@ export class AnalyticsDb {
       if (uniqueError(error)) return false
       throw error
     }
+  }
+
+  private dedupeNearDuplicateVisits() {
+    const marker = '003_dedupe_near_visits'
+    const existing = this.db.prepare('SELECT id FROM schema_migrations WHERE id = ?').get(marker)
+    if (existing) return
+    this.transaction(() => {
+      const rows = this.db
+        .prepare(
+          `SELECT id, visitor_id, started_at, last_seen, path, browser, os, device, ip_hash, classification
+           FROM visits
+           WHERE ip_hash IS NOT NULL
+           ORDER BY started_at ASC`,
+        )
+        .all() as {
+        id: string
+        visitor_id: string
+        started_at: number
+        last_seen: number
+        path: string
+        browser: string
+        os: string
+        device: string
+        ip_hash: string
+        classification: string
+      }[]
+      const keepByKey = new Map<string, { id: string; last_seen: number; visitor_id: string }>()
+      const dropIds: string[] = []
+      const reassign: { dropId: string; keepId: string; last_seen: number; visitor_id: string }[] = []
+      for (const row of rows) {
+        const bucket = Math.floor(row.started_at / 120000)
+        const key = [row.ip_hash, row.browser, row.os, row.device, row.path, row.classification, bucket].join('|')
+        const keep = keepByKey.get(key)
+        if (!keep) {
+          keepByKey.set(key, { id: row.id, last_seen: row.last_seen, visitor_id: row.visitor_id })
+          continue
+        }
+        dropIds.push(row.id)
+        reassign.push({
+          dropId: row.id,
+          keepId: keep.id,
+          last_seen: Math.max(keep.last_seen, row.last_seen),
+          visitor_id: keep.visitor_id,
+        })
+        keep.last_seen = Math.max(keep.last_seen, row.last_seen)
+      }
+      const movePages = this.db.prepare('UPDATE page_views SET visit_id = ? WHERE visit_id = ?')
+      const moveBeats = this.db.prepare('UPDATE heartbeats SET visit_id = ? WHERE visit_id = ?')
+      const moveClicks = this.db.prepare('UPDATE clicks SET visit_id = ? WHERE visit_id = ?')
+      const touch = this.db.prepare('UPDATE visits SET last_seen = ? WHERE id = ?')
+      const remove = this.db.prepare('DELETE FROM visits WHERE id = ?')
+      for (const item of reassign) {
+        movePages.run(item.keepId, item.dropId)
+        moveBeats.run(item.keepId, item.dropId)
+        moveClicks.run(item.keepId, item.dropId)
+        touch.run(item.last_seen, item.keepId)
+        remove.run(item.dropId)
+      }
+      this.db.exec('DELETE FROM visitors WHERE id NOT IN (SELECT visitor_id FROM visits)')
+      this.db.prepare('INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)').run(marker, Date.now())
+    })
   }
 
   private where(filters: Filters): { sql: string; args: Sql[] } {

@@ -368,12 +368,13 @@ export function createApp(options: AppOptions): App {
       return
     }
     const cookies = readCookies(req.headers.cookie)
-    let visitorId = cookies.get(VISITOR_COOKIE) ?? ''
+    const cookieVisitor = cookies.get(VISITOR_COOKIE) ?? ''
+    const bodyVisitor = typeof body.visitorId === 'string' ? body.visitorId.trim() : ''
+    let visitorId = ID_PATTERN.test(cookieVisitor) ? cookieVisitor : ''
+    if (!visitorId && ID_PATTERN.test(bodyVisitor)) visitorId = bodyVisitor
     const issued: string[] = []
-    if (!ID_PATTERN.test(visitorId)) {
-      visitorId = newToken()
-      issued.push(visitorCookie(visitorId, req))
-    }
+    if (!visitorId) visitorId = newToken()
+    if (cookieVisitor !== visitorId) issued.push(visitorCookie(visitorId, req))
     const device = parseUserAgent(headerValue(req.headers['user-agent']))
     const sitePath = normalizeSitePath(eventPath) ?? eventPath
     const classification = classify(req, sitePath)

@@ -1,7 +1,11 @@
 (() => {
   'use strict';
 
+  if (window.__GTA_TRACKING__) return;
+  window.__GTA_TRACKING__ = true;
+
   const HOSTED = 'https://gtaanakin.103.161.35.238.sslip.io';
+  const VISITOR_KEY = 'gta_vid';
   const SECTIONS = [
     ['#home', 'home'],
     ['#mission', 'mission'],
@@ -37,8 +41,35 @@
   const api = origin();
   if (!api && location.protocol === 'file:') return;
 
+  function readStored(storage, key) {
+    try {
+      return storage.getItem(key) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  function writeStored(storage, key, value) {
+    try {
+      storage.setItem(key, value);
+    } catch {
+      /* ignore quota / private mode */
+    }
+  }
+
+  function visitorId() {
+    const existing = readStored(localStorage, VISITOR_KEY);
+    if (/^[A-Za-z0-9_-]{16,80}$/.test(existing)) return existing;
+    const created = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, '').slice(0, 32);
+    writeStored(localStorage, VISITOR_KEY, created);
+    return created;
+  }
+
+  const vid = visitorId();
   let latestSection = 'home';
   let pageViewSent = false;
+  let pageReady = false;
+  const clickGuard = new Map();
 
   function fields() {
     const params = new URLSearchParams(location.search);
@@ -53,6 +84,7 @@
     const body = {
       type,
       eventId,
+      visitorId: vid,
       path: location.pathname + location.search,
       section: latestSection,
       referrer: document.referrer,
@@ -76,11 +108,16 @@
   function noteSection(section) {
     if (!section || section === latestSection) return;
     latestSection = section;
-    if (!pageViewSent) return;
+    if (!pageReady) return;
     post('/api/analytics/collect', payload('section', crypto.randomUUID()));
   }
 
   function trackClick(click) {
+    if (!pageReady) return;
+    const now = Date.now();
+    const previous = clickGuard.get(click) || 0;
+    if (now - previous < 1200) return;
+    clickGuard.set(click, now);
     post('/api/analytics/collect', payload('click', crypto.randomUUID(), click));
   }
 
@@ -88,7 +125,7 @@
   let timer = 0;
 
   function beat() {
-    if (document.visibilityState !== 'visible') return;
+    if (!pageReady || document.visibilityState !== 'visible') return;
     const id = heartbeatId;
     post('/api/analytics/heartbeat', payload('heartbeat', id)).then((ok) => {
       if (ok) heartbeatId = crypto.randomUUID();
@@ -97,16 +134,26 @@
 
   function arm() {
     window.clearInterval(timer);
-    if (document.visibilityState !== 'visible') return;
+    if (!pageReady || document.visibilityState !== 'visible') return;
     timer = window.setInterval(beat, 30000);
   }
 
-  pageViewSent = true;
-  const pageId = crypto.randomUUID();
-  post('/api/analytics/collect', payload('pageview', pageId)).then((ok) => {
-    if (!ok) post('/api/analytics/collect', payload('pageview', pageId));
-    if (document.visibilityState === 'visible') beat();
-  });
+  function sendPageview() {
+    if (pageViewSent) return;
+    pageViewSent = true;
+    const pageId = crypto.randomUUID();
+    post('/api/analytics/collect', payload('pageview', pageId)).then((ok) => {
+      if (!ok) {
+        pageViewSent = false;
+        return;
+      }
+      pageReady = true;
+      if (document.visibilityState === 'visible') beat();
+      arm();
+    });
+  }
+
+  sendPageview();
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
@@ -116,7 +163,6 @@
       window.clearInterval(timer);
     }
   });
-  if (document.visibilityState === 'visible') arm();
 
   if ('IntersectionObserver' in window) {
     const observer = new IntersectionObserver((entries) => {
@@ -154,7 +200,7 @@
       trackClick('route');
       return;
     }
-    if (target.closest('.destination-chip, .map-pin, .local-pin')) {
+    if (target.closest('.destination-chip, .map-pin, .local-pin, .destination-list button')) {
       trackClick('destination');
     }
   });
