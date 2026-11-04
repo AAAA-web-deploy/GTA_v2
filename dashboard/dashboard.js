@@ -23,7 +23,6 @@
   let total = 0;
   const pageSize = 25;
   const selected = new Set();
-  const revealed = {};
 
   function url(path) {
     return origin + path;
@@ -150,7 +149,7 @@
       const place = document.createElement("td");
       place.textContent = visit.location || "";
       const ip = document.createElement("td");
-      ip.textContent = revealed[visit.id] || visit.ip || "Unavailable";
+      ip.textContent = visit.ip || "Unavailable";
       const device = document.createElement("td");
       device.textContent = [visit.device, visit.browser, visit.os].filter(Boolean).join(" · ");
       const path = document.createElement("td");
