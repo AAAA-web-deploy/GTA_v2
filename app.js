@@ -53,7 +53,7 @@
   });
   const $ = (selector, parent = document) => parent.querySelector(selector);
   const element = (tag, className, text) => { const el = document.createElement(tag); if (className) el.className = className; if (text != null) el.textContent = text; return el; };
-  const image = (src, alt, lazy = true) => { const el = document.createElement('img'); el.src = src; el.alt = alt; el.width = 1672; el.height = 941; if (lazy) el.loading = 'lazy'; return el; };
+  const image = (src, alt, lazy = true) => { const el = document.createElement('img'); el.src = src; el.alt = alt; el.width = 1672; el.height = 941; el.decoding = 'async'; if (lazy) { el.loading = 'lazy'; el.setAttribute('fetchpriority', 'low'); } return el; };
   const dialog = $('#detail-dialog'), dialogImage = $('#dialog-image'), title = $('#dialog-title'), kicker = $('#dialog-kicker'), text = $('#dialog-text'), outcome = $('#dialog-outcome'), outcomeText = $('#outcome-text'), outcomeButton = $('#outcome-button');
   let lastTrigger = null;
   function openDetail(item, type, trigger) {
