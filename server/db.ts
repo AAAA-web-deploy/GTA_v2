@@ -303,29 +303,37 @@ export class AnalyticsDb {
         let visitId = latest && gap >= 0 && gap <= input.visitTimeoutMs ? latest.id : null
 
         // Cookie-less cross-origin races mint a new visitor id per request.
-        // Reuse a near-identical open visit from the same IP + device fingerprint.
-        if (!visitId && input.ip) {
-          const twin = this.db
-            .prepare(
-              `SELECT id, last_seen FROM visits
-               WHERE ip_hash = ?
-                 AND browser = ?
-                 AND os = ?
-                 AND device = ?
-                 AND path = ?
-                 AND classification = ?
-                 AND last_seen >= ?
-               ORDER BY last_seen DESC LIMIT 1`,
-            )
-            .get(
-              ipHash(input.ip),
-              input.browser,
-              input.os,
-              input.device,
-              input.path,
-              input.classification,
-              input.at - Math.min(input.visitTimeoutMs, 2 * 60 * 1000),
-            ) as { id: string; last_seen: number } | undefined
+        // Reuse a near-identical open visit from the same device fingerprint.
+        if (!visitId) {
+          const windowMs = input.ip ? Math.min(input.visitTimeoutMs, 2 * 60 * 1000) : 20 * 1000
+          const twin = input.ip
+            ? (this.db
+                .prepare(
+                  `SELECT id FROM visits
+                   WHERE ip_hash = ?
+                     AND browser = ? AND os = ? AND device = ? AND path = ? AND classification = ?
+                     AND last_seen >= ?
+                   ORDER BY last_seen DESC LIMIT 1`,
+                )
+                .get(
+                  ipHash(input.ip),
+                  input.browser,
+                  input.os,
+                  input.device,
+                  input.path,
+                  input.classification,
+                  input.at - windowMs,
+                ) as { id: string } | undefined)
+            : (this.db
+                .prepare(
+                  `SELECT id FROM visits
+                   WHERE browser = ? AND os = ? AND device = ? AND path = ? AND classification = ?
+                     AND last_seen >= ?
+                   ORDER BY last_seen DESC LIMIT 1`,
+                )
+                .get(input.browser, input.os, input.device, input.path, input.classification, input.at - windowMs) as
+                | { id: string }
+                | undefined)
           if (twin) visitId = twin.id
         }
 
