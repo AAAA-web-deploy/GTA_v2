@@ -22,17 +22,19 @@
     setProgress(100);
     document.documentElement.classList.add('is-loaded');
     document.documentElement.classList.remove('is-loading');
+    root.classList.add('is-done');
     window.setTimeout(() => {
       root.setAttribute('hidden', '');
       root.setAttribute('aria-busy', 'false');
-    }, 420);
+      root.style.display = 'none';
+    }, 380);
   };
 
   const markReady = () => {
     if (settled) return;
     settled = true;
     setProgress(100);
-    window.setTimeout(finish, 180);
+    window.setTimeout(finish, 90);
   };
 
   const sources = [
@@ -52,10 +54,17 @@
 
   sources.forEach((src) => {
     const img = new Image();
+    let counted = false;
+    const onDone = () => {
+      if (counted) return;
+      counted = true;
+      bump();
+    };
     img.decoding = 'async';
-    img.onload = bump;
-    img.onerror = bump;
+    img.onload = onDone;
+    img.onerror = onDone;
     img.src = src;
+    if (img.complete) onDone();
   });
 
   setProgress(8);

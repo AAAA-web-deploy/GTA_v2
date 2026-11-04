@@ -84,7 +84,8 @@
 /* Faster first paint: skip layout work for offscreen sections until scrolled near. */
 .briefing,.characters,.routes,.map-section,.local-section,.tokenomics,.community,.footer{content-visibility:auto;contain-intrinsic-size:1px 720px}
 .page-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:radial-gradient(ellipse at 50% 35%,#1a1240 0%,#080d1d 62%);color:#f6f7ff;transition:opacity .4s ease,visibility .4s ease}
-.page-loader[hidden]{display:flex!important;opacity:0;visibility:hidden;pointer-events:none}
+.page-loader.is-done,.page-loader[hidden]{opacity:0;visibility:hidden;pointer-events:none}
+.page-loader[hidden]{display:none!important}
 .page-loader-mark{font:900 18px/1 Poppins,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--pink);font-style:italic}
 .page-loader-track{width:min(280px,62vw);height:4px;border-radius:999px;background:#24314d;overflow:hidden;box-shadow:0 0 18px #fa3eb933}
 .page-loader-fill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--cyan),var(--pink));box-shadow:0 0 14px #fa3eb9aa;transition:width .25s ease}
