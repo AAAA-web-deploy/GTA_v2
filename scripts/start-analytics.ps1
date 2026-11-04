@@ -19,7 +19,7 @@ $env:TRUSTED_PROXIES = "127.0.0.1,::1"
 $env:TRUSTED_IP_HEADER = "x-forwarded-for"
 $env:ALLOWED_ORIGINS = "https://gtaanakin.xyz,https://www.gtaanakin.xyz,http://gtaanakin.xyz,http://www.gtaanakin.xyz,https://gtaanakin.103.161.35.238.sslip.io"
 if (-not $env:DASHBOARD_PASSWORD) {
-  $env:DASHBOARD_PASSWORD = "GTA-Visitors-2026"
+  $env:DASHBOARD_PASSWORD = "AAAA"
 }
 
 Start-Process -FilePath $node `
