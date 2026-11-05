@@ -6,5 +6,5 @@ window.GTA_CONFIG = {
   ownership: 'Renounced',
   lpLocked: 'Lock Planned',
   telegramUrl: 'https://t.me/grandtheftanakin',
-  xUrl: 'https://x.com/gta_erc20'
+  xUrl: 'https://x.com/gta__erc20'
 };
