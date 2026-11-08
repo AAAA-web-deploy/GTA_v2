@@ -218,6 +218,12 @@ button.link { border: 0; background: none; color: var(--link); font: inherit; cu
   font-size: 13px;
 }
 
+.breakdown-more {
+  margin-top: 12px;
+  width: 100%;
+  height: 36px;
+}
+
 @media (max-width: 860px) {
   .breakdowns { grid-template-columns: 1fr; }
   .breakdown-list.hours { grid-template-columns: repeat(4, minmax(0, 1fr)); }

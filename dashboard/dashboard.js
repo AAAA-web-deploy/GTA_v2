@@ -111,7 +111,7 @@
     return host || "Direct";
   }
 
-  function renderBreakdown(container, rows, getLabel) {
+  function renderBreakdown(container, rows, getLabel, options) {
     container.replaceChildren();
     if (!rows || !rows.length) {
       const empty = document.createElement("p");
@@ -120,27 +120,51 @@
       container.appendChild(empty);
       return;
     }
+    const limit = options && options.limit > 0 ? options.limit : 0;
+    const expandable = limit > 0 && rows.length > limit;
+    let expanded = false;
     const max = Math.max.apply(null, rows.map(function (row) { return Number(row.visits) || 0; }).concat([1]));
-    rows.forEach(function (row) {
-      const item = document.createElement("div");
-      item.className = "breakdown-row";
-      const meta = document.createElement("div");
-      meta.className = "meta";
-      const label = document.createElement("div");
-      label.className = "label";
-      label.textContent = getLabel(row);
-      const bar = document.createElement("div");
-      bar.className = "bar";
-      const fill = document.createElement("span");
-      fill.style.width = Math.max(4, Math.round((Number(row.visits) || 0) / max * 100)) + "%";
-      bar.appendChild(fill);
-      meta.append(label, bar);
-      const count = document.createElement("div");
-      count.className = "count";
-      count.textContent = String(row.visits || 0) + " · " + pct(row.share) + "%";
-      item.append(meta, count);
-      container.appendChild(item);
-    });
+    var toggle = null;
+
+    function paint() {
+      container.replaceChildren();
+      const visible = expanded || !expandable ? rows : rows.slice(0, limit);
+      visible.forEach(function (row) {
+        const item = document.createElement("div");
+        item.className = "breakdown-row";
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = getLabel(row);
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const fill = document.createElement("span");
+        fill.style.width = Math.max(4, Math.round((Number(row.visits) || 0) / max * 100)) + "%";
+        bar.appendChild(fill);
+        meta.append(label, bar);
+        const count = document.createElement("div");
+        count.className = "count";
+        count.textContent = String(row.visits || 0) + " · " + pct(row.share) + "%";
+        item.append(meta, count);
+        container.appendChild(item);
+      });
+      if (expandable) {
+        toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "btn btn-quiet breakdown-more";
+        toggle.textContent = expanded
+          ? "Show less"
+          : "Show more (" + (rows.length - limit) + ")";
+        toggle.addEventListener("click", function () {
+          expanded = !expanded;
+          paint();
+        });
+        container.appendChild(toggle);
+      }
+    }
+
+    paint();
   }
 
   function renderHours(container, hours) {
@@ -240,7 +264,7 @@
     });
     renderBreakdown(document.getElementById("by-country"), summary.countries || [], function (row) {
       return row.country || "Unknown";
-    });
+    }, { limit: 5 });
     const deviceTypes = summary.deviceTypes && summary.deviceTypes.length
       ? summary.deviceTypes
       : summarizeDeviceTypes(summary.devices || [], summary.visits || 0);
