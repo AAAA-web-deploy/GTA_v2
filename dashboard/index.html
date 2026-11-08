@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Visitor dashboard · Grand Theft Anakin</title>
   <link rel="icon" href="../assets/images/favicon.png" type="image/png">
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard.css?v=20261107a">
 </head>
 <body>
   <main class="dash" id="dashboard-main">
@@ -41,6 +41,25 @@
         <button class="btn" type="submit">Apply</button>
       </form>
       <div class="stats" id="stats"></div>
+      <div class="breakdowns" id="breakdowns" aria-label="Visit breakdowns">
+        <section class="breakdown card">
+          <h2>By referrer</h2>
+          <div class="breakdown-list" id="by-referrer"></div>
+        </section>
+        <section class="breakdown card">
+          <h2>By country</h2>
+          <div class="breakdown-list" id="by-country"></div>
+        </section>
+        <section class="breakdown card">
+          <h2>By device</h2>
+          <div class="breakdown-list" id="by-device"></div>
+        </section>
+        <section class="breakdown card">
+          <h2>By time <small>America/New_York</small></h2>
+          <div class="breakdown-list hours" id="by-hour"></div>
+          <div class="trend" id="by-trend" hidden></div>
+        </section>
+      </div>
       <div class="toolbar">
         <button class="btn btn-quiet" id="export" type="button">Export CSV</button>
         <label><input id="include-ips" type="checkbox" checked> Include IP addresses</label>
@@ -70,6 +89,6 @@
       <article class="card" id="detail" hidden></article>
     </section>
   </main>
-  <script src="dashboard.js?v=20261104i"></script>
+  <script src="dashboard.js?v=20261107a"></script>
 </body>
 </html>

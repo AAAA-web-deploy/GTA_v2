@@ -456,16 +456,17 @@ export class AnalyticsDb {
     })
   }
 
-  private where(filters: Filters): { sql: string; args: Sql[] } {
+  private where(filters: Filters, alias = ''): { sql: string; args: Sql[] } {
+    const col = alias ? `${alias}.` : ''
     const placeholders = filters.classes.map(() => '?').join(', ')
     const args: Sql[] = [filters.range.start, filters.range.end, ...filters.classes]
-    let sql = `started_at >= ? AND started_at <= ? AND classification IN (${placeholders})`
+    let sql = `${col}started_at >= ? AND ${col}started_at <= ? AND ${col}classification IN (${placeholders})`
     if (filters.campaign) {
-      sql += ' AND utm_campaign = ?'
+      sql += ` AND ${col}utm_campaign = ?`
       args.push(filters.campaign)
     }
     if (filters.referrer) {
-      sql += ' AND referrer_host = ?'
+      sql += ` AND ${col}referrer_host = ?`
       args.push(filters.referrer)
     }
     return { sql, args }
@@ -539,7 +540,7 @@ export class AnalyticsDb {
     const referrals = this.db
       .prepare(
         `SELECT COALESCE(referrer_host, '') AS host, COUNT(*) AS n FROM visits WHERE ${where.sql}
-         GROUP BY host ORDER BY n DESC LIMIT 20`,
+         GROUP BY host ORDER BY n DESC LIMIT 30`,
       )
       .all(...where.args) as { host: string; n: number }[]
     const campaigns = this.db
@@ -549,6 +550,35 @@ export class AnalyticsDb {
          GROUP BY source, medium, campaign ORDER BY n DESC LIMIT 20`,
       )
       .all(...where.args) as { source: string; medium: string; campaign: string; n: number }[]
+    const visitAlias = this.where(filters, 'v')
+    const countries = this.db
+      .prepare(
+        `SELECT COALESCE(NULLIF(l.country, ''), 'Unknown') AS country, COUNT(*) AS n
+         FROM visits v
+         LEFT JOIN ip_locations l ON l.ip_hash = v.ip_hash
+         WHERE ${visitAlias.sql}
+         GROUP BY country
+         ORDER BY n DESC
+         LIMIT 30`,
+      )
+      .all(...visitAlias.args) as { country: string; n: number }[]
+    const devices = this.db
+      .prepare(
+        `SELECT COALESCE(NULLIF(device, ''), 'unknown') AS device,
+                COALESCE(NULLIF(browser, ''), 'Other') AS browser,
+                COALESCE(NULLIF(os, ''), 'Other') AS os,
+                COUNT(*) AS n
+         FROM visits WHERE ${where.sql}
+         GROUP BY device, browser, os
+         ORDER BY n DESC
+         LIMIT 30`,
+      )
+      .all(...where.args) as { device: string; browser: string; os: string; n: number }[]
+    const hourCounts = Array.from({ length: 24 }, () => 0)
+    for (const row of started) {
+      hourCounts[nyParts(row.started_at).hour] += 1
+    }
+    const visitTotal = Number(visits.n) || 1
     return {
       activeVisitors: Number(active.n),
       browserVisitors: Number(visitors.n),
@@ -561,6 +591,25 @@ export class AnalyticsDb {
       ),
       trendUnit: filters.range.unit,
       referrals: referrals.map((row) => ({ host: row.host || '(direct)', visits: Number(row.n) })),
+      countries: countries.map((row) => ({
+        country: row.country,
+        visits: Number(row.n),
+        share: Number(row.n) / visitTotal,
+      })),
+      devices: devices.map((row) => ({
+        device: row.device,
+        browser: row.browser,
+        os: row.os,
+        label: `${row.device} · ${row.browser} · ${row.os}`,
+        visits: Number(row.n),
+        share: Number(row.n) / visitTotal,
+      })),
+      hours: hourCounts.map((count, hour) => ({
+        hour,
+        label: `${String(hour).padStart(2, '0')}:00`,
+        visits: count,
+        share: count / visitTotal,
+      })),
       campaigns: campaigns.map((row) => ({
         source: row.source,
         medium: row.medium,

@@ -99,6 +99,109 @@
     }).format(ms);
   }
 
+  function pct(share) {
+    return Math.round((Number(share) || 0) * 1000) / 10;
+  }
+
+  function referrerLabel(host) {
+    const value = String(host || "(direct)").toLowerCase();
+    if (value === "t.co" || value === "twitter.com" || value === "x.com") return "X / Twitter (" + host + ")";
+    if (value === "t.me" || value.indexOf("telegram") !== -1) return "Telegram (" + host + ")";
+    if (value === "(direct)") return "Direct";
+    return host || "Direct";
+  }
+
+  function renderBreakdown(container, rows, getLabel) {
+    container.replaceChildren();
+    if (!rows || !rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty-note";
+      empty.textContent = "No visits in this range.";
+      container.appendChild(empty);
+      return;
+    }
+    const max = Math.max.apply(null, rows.map(function (row) { return Number(row.visits) || 0; }).concat([1]));
+    rows.forEach(function (row) {
+      const item = document.createElement("div");
+      item.className = "breakdown-row";
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = getLabel(row);
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      fill.style.width = Math.max(4, Math.round((Number(row.visits) || 0) / max * 100)) + "%";
+      bar.appendChild(fill);
+      meta.append(label, bar);
+      const count = document.createElement("div");
+      count.className = "count";
+      count.textContent = String(row.visits || 0) + " · " + pct(row.share) + "%";
+      item.append(meta, count);
+      container.appendChild(item);
+    });
+  }
+
+  function renderHours(container, hours) {
+    container.replaceChildren();
+    const rows = Array.isArray(hours) && hours.length ? hours : Array.from({ length: 24 }, function (_, hour) {
+      return { hour: hour, label: String(hour).padStart(2, "0") + ":00", visits: 0, share: 0 };
+    });
+    const max = Math.max.apply(null, rows.map(function (row) { return Number(row.visits) || 0; }).concat([1]));
+    rows.forEach(function (row) {
+      const item = document.createElement("div");
+      item.className = "breakdown-row";
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = row.label || (String(row.hour).padStart(2, "0") + ":00");
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      fill.style.width = (Number(row.visits) ? Math.max(4, Math.round(Number(row.visits) / max * 100)) : 0) + "%";
+      bar.appendChild(fill);
+      const count = document.createElement("div");
+      count.className = "count";
+      count.textContent = String(row.visits || 0);
+      item.append(label, bar, count);
+      container.appendChild(item);
+    });
+  }
+
+  function renderTrend(container, trend, unit) {
+    container.replaceChildren();
+    if (!trend || !trend.length) {
+      container.hidden = true;
+      return;
+    }
+    container.hidden = false;
+    const title = document.createElement("div");
+    title.className = "trend-title";
+    title.textContent = unit === "day" ? "Visitors by day" : "Visitors by hour";
+    container.appendChild(title);
+    const max = Math.max.apply(null, trend.map(function (row) { return Number(row.visitors) || 0; }).concat([1]));
+    trend.forEach(function (row) {
+      const item = document.createElement("div");
+      item.className = "breakdown-row";
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = row.label || "";
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      const fill = document.createElement("span");
+      fill.style.width = (Number(row.visitors) ? Math.max(4, Math.round(Number(row.visitors) / max * 100)) : 0) + "%";
+      bar.appendChild(fill);
+      meta.append(label, bar);
+      const count = document.createElement("div");
+      count.className = "count";
+      count.textContent = String(row.visitors || 0);
+      item.append(meta, count);
+      container.appendChild(item);
+    });
+  }
+
   function renderStats(summary) {
     const clicks = summary.clicks || {};
     const cards = [
@@ -124,6 +227,20 @@
       item.append(label, value);
       stats.appendChild(item);
     });
+    const referrals = (summary.referrals || []).map(function (row) {
+      return { visits: row.visits, share: summary.visits ? row.visits / summary.visits : 0, host: row.host };
+    });
+    renderBreakdown(document.getElementById("by-referrer"), referrals, function (row) {
+      return referrerLabel(row.host);
+    });
+    renderBreakdown(document.getElementById("by-country"), summary.countries || [], function (row) {
+      return row.country || "Unknown";
+    });
+    renderBreakdown(document.getElementById("by-device"), summary.devices || [], function (row) {
+      return row.label || [row.device, row.browser, row.os].filter(Boolean).join(" · ");
+    });
+    renderHours(document.getElementById("by-hour"), summary.hours || []);
+    renderTrend(document.getElementById("by-trend"), summary.trend || [], summary.trendUnit);
   }
 
   function renderVisits(rows) {

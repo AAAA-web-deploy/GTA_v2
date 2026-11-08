@@ -97,3 +97,122 @@ button.link { border: 0; background: none; color: var(--link); font: inherit; cu
 
 #notice, #login-error { color: #9b2c2c; }
 #login-notice { color: var(--ink); }
+
+.breakdowns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.breakdown {
+  margin-top: 0;
+  padding: 16px 18px 14px;
+  min-height: 220px;
+}
+
+.breakdown h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.breakdown h2 small {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.breakdown-list {
+  display: grid;
+  gap: 8px;
+}
+
+.breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+}
+
+.breakdown-row .meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.breakdown-row .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.breakdown-row .bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #ececea;
+  overflow: hidden;
+}
+
+.breakdown-row .bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #2464db, #5a8dff);
+  border-radius: inherit;
+}
+
+.breakdown-row .count {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.breakdown-list.hours {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px 8px;
+}
+
+.breakdown-list.hours .breakdown-row {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.breakdown-list.hours .label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.breakdown-list.hours .count {
+  font-size: 11px;
+}
+
+.trend {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.trend-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.empty-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .breakdowns { grid-template-columns: 1fr; }
+  .breakdown-list.hours { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
