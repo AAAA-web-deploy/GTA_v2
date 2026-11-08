@@ -574,6 +574,14 @@ export class AnalyticsDb {
          LIMIT 30`,
       )
       .all(...where.args) as { device: string; browser: string; os: string; n: number }[]
+    const deviceTypes = this.db
+      .prepare(
+        `SELECT COALESCE(NULLIF(LOWER(device), ''), 'unknown') AS device, COUNT(*) AS n
+         FROM visits WHERE ${where.sql}
+         GROUP BY COALESCE(NULLIF(LOWER(device), ''), 'unknown')
+         ORDER BY n DESC`,
+      )
+      .all(...where.args) as { device: string; n: number }[]
     const hourCounts = Array.from({ length: 24 }, () => 0)
     for (const row of started) {
       hourCounts[nyParts(row.started_at).hour] += 1
@@ -596,6 +604,19 @@ export class AnalyticsDb {
         visits: Number(row.n),
         share: Number(row.n) / visitTotal,
       })),
+      deviceTypes: (() => {
+        const preferred = ['desktop', 'mobile']
+        const counted = new Map(deviceTypes.map((row) => [row.device, Number(row.n)]))
+        const rows = preferred.map((device) => {
+          const count = counted.get(device) ?? 0
+          return { device, visits: count, share: count / visitTotal }
+        })
+        for (const row of deviceTypes) {
+          if (preferred.includes(row.device)) continue
+          rows.push({ device: row.device, visits: Number(row.n), share: Number(row.n) / visitTotal })
+        }
+        return rows
+      })(),
       devices: devices.map((row) => ({
         device: row.device,
         browser: row.browser,
@@ -746,25 +767,42 @@ function ipHash(ip: string): string {
   return createHash('sha256').update(ip).digest('hex')
 }
 
-function bucketTrend(rows: { visitorId: string; at: number }[], range: Range): { start: number; label: string; visitors: number }[] {
-  const buckets = new Map<number, Set<string>>()
+function bucketTrend(rows: { visitorId: string; at: number }[], range: Range): { start: number; label: string; visitors: number; visits: number }[] {
+  const buckets = new Map<number, { visitors: Set<string>; visits: number }>()
   const starts: number[] = []
   let cursor = range.unit === 'day' ? startOfDay(range.start) : startOfHour(range.start)
   const end = range.end
   while (cursor <= end && starts.length < 48) {
     starts.push(cursor)
-    buckets.set(cursor, new Set())
-    cursor = range.unit === 'day' ? cursor + 24 * 60 * 60 * 1000 : cursor + 60 * 60 * 1000
+    buckets.set(cursor, { visitors: new Set(), visits: 0 })
+    cursor = range.unit === 'day' ? nextNyDay(cursor) : nextNyHour(cursor)
   }
   for (const row of rows) {
     const key = range.unit === 'day' ? startOfDay(row.at) : startOfHour(row.at)
-    buckets.get(key)?.add(row.visitorId)
+    const bucket = buckets.get(key)
+    if (!bucket) continue
+    bucket.visitors.add(row.visitorId)
+    bucket.visits += 1
   }
-  return starts.map((start) => ({
-    start,
-    label: trendLabel(start, range.unit),
-    visitors: buckets.get(start)?.size ?? 0,
-  }))
+  return starts.map((start) => {
+    const bucket = buckets.get(start)
+    return {
+      start,
+      label: trendLabel(start, range.unit),
+      visitors: bucket?.visitors.size ?? 0,
+      visits: bucket?.visits ?? 0,
+    }
+  })
+}
+
+function nextNyDay(ms: number): number {
+  const parts = nyParts(ms)
+  return zonedTimeToUtc(parts.year, parts.month, parts.day + 1, 0, 0, 0)
+}
+
+function nextNyHour(ms: number): number {
+  const parts = nyParts(ms)
+  return zonedTimeToUtc(parts.year, parts.month, parts.day, parts.hour + 1, 0, 0)
 }
 
 function trendLabel(ms: number, unit: 'hour' | 'day'): string {

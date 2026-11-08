@@ -177,10 +177,14 @@
     container.hidden = false;
     const title = document.createElement("div");
     title.className = "trend-title";
-    title.textContent = unit === "day" ? "Visitors by day" : "Visitors by hour";
+    title.textContent = unit === "day" ? "Visits by day" : "Visits by hour";
     container.appendChild(title);
-    const max = Math.max.apply(null, trend.map(function (row) { return Number(row.visitors) || 0; }).concat([1]));
+    const max = Math.max.apply(null, trend.map(function (row) {
+      return Number(row.visits != null ? row.visits : row.visitors) || 0;
+    }).concat([1]));
     trend.forEach(function (row) {
+      const value = Number(row.visits != null ? row.visits : row.visitors) || 0;
+      const uniques = Number(row.visitors) || 0;
       const item = document.createElement("div");
       item.className = "breakdown-row";
       const meta = document.createElement("div");
@@ -191,12 +195,13 @@
       const bar = document.createElement("div");
       bar.className = "bar";
       const fill = document.createElement("span");
-      fill.style.width = (Number(row.visitors) ? Math.max(4, Math.round(Number(row.visitors) / max * 100)) : 0) + "%";
+      fill.style.width = (value ? Math.max(4, Math.round(value / max * 100)) : 0) + "%";
       bar.appendChild(fill);
       meta.append(label, bar);
       const count = document.createElement("div");
       count.className = "count";
-      count.textContent = String(row.visitors || 0);
+      count.textContent = value + (uniques !== value ? " visits · " + uniques + " visitors" : "");
+      if (uniques === value) count.textContent = String(value);
       item.append(meta, count);
       container.appendChild(item);
     });
@@ -236,11 +241,30 @@
     renderBreakdown(document.getElementById("by-country"), summary.countries || [], function (row) {
       return row.country || "Unknown";
     });
+    const deviceTypes = summary.deviceTypes && summary.deviceTypes.length
+      ? summary.deviceTypes
+      : summarizeDeviceTypes(summary.devices || [], summary.visits || 0);
+    renderBreakdown(document.getElementById("by-device-type"), deviceTypes, function (row) {
+      const name = String(row.device || "unknown");
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    });
     renderBreakdown(document.getElementById("by-device"), summary.devices || [], function (row) {
       return row.label || [row.device, row.browser, row.os].filter(Boolean).join(" · ");
     });
     renderHours(document.getElementById("by-hour"), summary.hours || []);
     renderTrend(document.getElementById("by-trend"), summary.trend || [], summary.trendUnit);
+  }
+
+  function summarizeDeviceTypes(devices, total) {
+    const counts = { desktop: 0, mobile: 0 };
+    devices.forEach(function (row) {
+      const key = String(row.device || "unknown").toLowerCase();
+      counts[key] = (counts[key] || 0) + (Number(row.visits) || 0);
+    });
+    return ["desktop", "mobile"].map(function (device) {
+      const visits = counts[device] || 0;
+      return { device: device, visits: visits, share: total ? visits / total : 0 };
+    });
   }
 
   function renderVisits(rows) {
