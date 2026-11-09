@@ -88,6 +88,7 @@ export function resolveRange(input: {
   const { range, now } = input
   if (range === '24h') return { start: now - 24 * 60 * 60 * 1000, end: now, unit: 'hour' }
   if (range === '7d') return { start: now - 7 * 24 * 60 * 60 * 1000, end: now, unit: 'day' }
+  if (range === 'all') return { start: 0, end: now, unit: 'day' }
   if (range === 'custom') {
     if (!input.from || !input.to) return { error: 'Choose a start and end date.' }
     const start = parseNyDate(input.from)

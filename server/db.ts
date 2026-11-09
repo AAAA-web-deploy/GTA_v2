@@ -770,13 +770,25 @@ function ipHash(ip: string): string {
 function bucketTrend(rows: { visitorId: string; at: number }[], range: Range): { start: number; label: string; visitors: number; visits: number }[] {
   const buckets = new Map<number, { visitors: Set<string>; visits: number }>()
   const starts: number[] = []
-  let cursor = range.unit === 'day' ? startOfDay(range.start) : startOfHour(range.start)
-  const end = range.end
-  while (cursor <= end && starts.length < 48) {
-    starts.push(cursor)
-    buckets.set(cursor, { visitors: new Set(), visits: 0 })
-    cursor = range.unit === 'day' ? nextNyDay(cursor) : nextNyHour(cursor)
+  const maxBuckets = range.unit === 'day' ? 120 : 48
+  const earliestRow = rows.reduce((min, row) => Math.min(min, row.at), Number.POSITIVE_INFINITY)
+  const rangeStart = range.start > 0 ? range.start : Number.isFinite(earliestRow) ? earliestRow : range.end
+  if (range.unit === 'day') {
+    let cursor = startOfDay(range.end)
+    const minStart = startOfDay(rangeStart)
+    while (cursor >= minStart && starts.length < maxBuckets) {
+      starts.push(cursor)
+      cursor = prevNyDay(cursor)
+    }
+    starts.reverse()
+  } else {
+    let cursor = startOfHour(rangeStart)
+    while (cursor <= range.end && starts.length < maxBuckets) {
+      starts.push(cursor)
+      cursor = nextNyHour(cursor)
+    }
   }
+  for (const start of starts) buckets.set(start, { visitors: new Set(), visits: 0 })
   for (const row of rows) {
     const key = range.unit === 'day' ? startOfDay(row.at) : startOfHour(row.at)
     const bucket = buckets.get(key)
@@ -795,14 +807,14 @@ function bucketTrend(rows: { visitorId: string; at: number }[], range: Range): {
   })
 }
 
-function nextNyDay(ms: number): number {
-  const parts = nyParts(ms)
-  return zonedTimeToUtc(parts.year, parts.month, parts.day + 1, 0, 0, 0)
-}
-
 function nextNyHour(ms: number): number {
   const parts = nyParts(ms)
   return zonedTimeToUtc(parts.year, parts.month, parts.day, parts.hour + 1, 0, 0)
+}
+
+function prevNyDay(ms: number): number {
+  const parts = nyParts(ms)
+  return zonedTimeToUtc(parts.year, parts.month, parts.day - 1, 0, 0, 0)
 }
 
 function trendLabel(ms: number, unit: 'hour' | 'day'): string {
